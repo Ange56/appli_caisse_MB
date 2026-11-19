@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Caisse Marché</title>
+  <!-- Manifeste intégré pour installation PWA / Écran d'accueil -->
+  <link rel="manifest" href='data:application/json,{"name":"Caisse Marché","short_name":"Caisse","start_url":".","display":"standalone","background_color":"#f4f6f8","theme_color":"#2563eb"}'>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1e293b;
+      --accent: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+    header { background: var(--primary); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    
+    nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; }
+    nav button { flex: 1; padding: 12px; border: none; background: none; font-size: 0.95rem; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; }
+    nav button.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .tab-content { display: none; padding: 15px; }
+    .tab-content.active { display: block; }
+
+    /* Grille de caisse */
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    .btn-product { background: var(--card); border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.1s; position: relative; }
+    .btn-product:active { transform: scale(0.97); background: #eff6ff; }
+    .btn-product.out-of-stock { opacity: 0.5; border-color: #cbd5e1; }
+    .btn-product .title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; display: block; }
+    .btn-product .price { color: var(--primary); font-weight: 800; font-size: 1.1rem; }
+    .btn-product .stock { font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block; }
+    .btn-product .badge-warning { background: var(--warning); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; margin-left: 4px; }
+
+    /* Résumé de caisse */
+    .summary-card { background: var(--card); border-radius: 12px; padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 1.1rem; margin-bottom: 8px; }
+    .summary-row.total { font-weight: 800; font-size: 1.4rem; color: var(--primary); border-top: 2px dashed #e2e8f0; padding-top: 8px; margin-top: 8px; }
+    
+    .history-list { list-style: none; max-height: 180px; overflow-y: auto; margin-bottom: 10px; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+    .history-item button { background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+
+    /* Formulaires */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; }
+    .btn-danger { background: var(--danger); }
+    .btn-secondary { background: #64748b; margin-top: 8px; }
+
+    /* Table de gestion */
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
+    th { background: #f8fafc; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Caisse Stand Marché</h1>
+  </header>
+
+  <nav>
+    <button class="active" onclick="switchTab('caisse')"> Caisse</button>
+    <button onclick="switchTab('produits')"> Produits</button>
+    <button onclick="switchTab('ventes')"> Bilan</button>
+  </nav>
+
+  <!-- ONGLET CAISSE -->
+  <div id="caisse" class="tab-content active">
+    <div class="grid" id="grid-produits"></div>
+
+    <div class="summary-card">
+      <h3 style="margin-bottom: 10px; font-size: 1rem;">Vente en cours</h3>
+      <ul class="history-list" id="ticket-list"></ul>
+      <div class="summary-row total">
+        <span>Total :</span>
+        <span id="ticket-total">0,00 €</span>
+      </div>
+      <button class="btn-submit" style="margin-top: 10px;" onclick="validerVente()">Valider la vente</button>
+    </div>
+  </div>
+
+  <!-- ONGLET PRODUITS -->
+  <div id="produits" class="tab-content">
+    <div class="summary-card">
+      <h3>Ajouter / Modifier un produit</h3>
+      <form id="form-produit" onsubmit="sauvegarderProduit(event)">
+        <input type="hidden" id="prod-id">
+        <div class="form-group">
+          <label>Nom du produit</label>
+          <input type="text" id="prod-nom" placeholder="ex: Clown (grand)" required>
+        </div>
+        <div class="form-group" style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <label>Prix (€)</label>
+            <input type="number" step="0.5" id="prod-prix" placeholder="25" required>
+          </div>
+          <div style="flex: 1;">
+            <label>Stock</label>
+            <input type="number" id="prod-stock" placeholder="2" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">Enregistrer le produit</button>
+      </form>
+    </div>
+
+    <table id="table-produits">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prix</th>
+          <th>Stock</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- ONGLET BILAN / EXPORT -->
+  <div id="ventes" class="tab-content">
+    <div class="summary-card">
+      <h3>Bilan de la journée</h3>
+      <div class="summary-row" style="margin-top: 10px;">
+        <span>Total encaissé :</span>
+        <strong id="bilan-total" style="color: var(--accent); font-size: 1.3rem;">0,00 €</strong>
+      </div>
+      <div class="summary-row">
+        <span>Articles vendus :</span>
+        <strong id="bilan-articles">0</strong>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <h3>Sauvegarde & Données</h3>
+      <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px;">Exporte tes données régulièrement pour ne rien perdre.</p>
+      <button class="btn-submit" onclick="exporterDonnees()"> Exporter la sauvegarde (.json)</button>
+      <button class="btn-submit btn-secondary" onclick="document.getElementById('file-import').click()"> Importer une sauvegarde</button>
+      <input type="file" id="file-import" style="display: none;" onchange="importerDonnees(event)">
+      <button class="btn-submit btn-danger" style="margin-top: 15px;" onclick="reinitialiserTout()"> Réinitialiser toutes les données</button>
+    </div>
+  </div>
+
+  <script>
+    // Produits par défaut récurés depuis ton Excel
+    const produitsInitiaux = [
+      { id: '1', nom: 'Clown (grand)', prix: 25, stock: 2 },
+      { id: '2', nom: 'Clown (petit)', prix: 20, stock: 2 },
+      { id: '3', nom: 'Dragon', prix: 35, stock: 2 },
+      { id: '4', nom: 'Mitaines', prix: 15, stock: 3 },
+      { id: '5', nom: 'Abeille (porte-clé)', prix: 8, stock: 5 },
+      { id: '6', nom: 'Abeille (peluche)', prix: 12, stock: 5 }
+    ];
+
+    let produits = JSON.parse(localStorage.getItem('stand_produits')) || produitsInitiaux;
+    let ventes = JSON.parse(localStorage.getItem('stand_ventes')) || [];
+    let ticketCourant = [];
+
+    // Sauvegarde automatique dans le navigateur
+    function sauvegarderLocal() {
+      localStorage.setItem('stand_produits', JSON.stringify(produits));
+      localStorage.setItem('stand_ventes', JSON.stringify(ventes));
+      render();
+    }
+
+    // Gestion des onglets
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Ajouter un article au ticket de caisse
+    function ajouterAuTicket(produitId) {
+      const prod = produits.find(p => p.id === produitId);
+      if (!prod || prod.stock <= 0) return;
+
+      prod.stock--;
+      ticketCourant.push({ id: prod.id, nom: prod.nom, prix: prod.prix });
+      sauvegarderLocal();
+    }
+
+    // Retirer un article du ticket en cours
+    function AnnulerArticleTicket(index) {
+      const article = ticketCourant[index];
+      const prod = produits.find(p => p.id === article.id);
+      if (prod) prod.stock++;
+      ticketCourant.splice(index, 1);
+      sauvegarderLocal();
+    }
+
+    // Valider la vente
+    function validerVente() {
+      if (ticketCourant.length === 0) return;
+      const total = ticketCourant.reduce((sum, item) => sum + item.prix, 0);
+      ventes.push({ date: new Date().toISOString(), articles: [...ticketCourant], total });
+      ticketCourant = [];
+      sauvegarderLocal();
+      alert('Vente enregistrée !');
+    }
+
+    // Enregistrer un nouveau produit ou une modification
+    function sauvegarderProduit(e) {
+      e.preventDefault();
+      const id = document.getElementById('prod-id').value || Date.now().toString();
+      const nom = document.getElementById('prod-nom').value;
+      const prix = parseFloat(document.getElementById('prod-prix').value);
+      const stock = parseInt(document.getElementById('prod-stock').value);
+
+      const existingIndex = produits.findIndex(p => p.id === id);
+      if (existingIndex > -1) {
+        produits[existingIndex] = { id, nom, prix, stock };
+      } else {
+        produits.push({ id, nom, prix, stock });
+      }
+
+      document.getElementById('form-produit').reset();
+      document.getElementById('prod-id').value = '';
+      sauvegarderLocal();
+    }
+
+    function editerProduit(id) {
+      const p = produits.find(item => item.id === id);
+      if (!p) return;
+      document.getElementById('prod-id').value = p.id;
+      document.getElementById('prod-nom').value = p.nom;
+      document.getElementById('prod-prix').value = p.prix;
+      document.getElementById('prod-stock').value = p.stock;
+      switchTab('produits');
+    }
+
+    function supprimerProduit(id) {
+      if (confirm('Supprimer ce produit ?')) {
+        produits = produits.filter(p => p.id !== id);
+        sauvegarderLocal();
+      }
+    }
+
+    // Exporter les données (JSON)
+    function exporterDonnees() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ produits, ventes }));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `sauvegarde_marche_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    // Importer les données
+    function importerDonnees(event) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.produits) produits = data.produits;
+          if (data.ventes) ventes = data.ventes;
+          sauvegarderLocal();
+          alert('Données importées avec succès !');
+        } catch (err) {
+          alert('Fichier invalide.');
+        }
+      };
+      reader.readAsText(event.target.files[0]);
+    }
+
+    function reinitialiserTout() {
+      if (confirm('Attention : cela va effacer toutes les ventes et réinitialiser les stocks. Continuer ?')) {
+        localStorage.clear();
+        produits = produitsInitiaux;
+        ventes = [];
+        ticketCourant = [];
+        sauvegarderLocal();
+      }
+    }
+
+    // Affichage dynamique (Render)
+    function render() {
+      // 1. Grille Caisse
+      const grid = document.getElementById('grid-produits');
+      grid.innerHTML = produits.map(p => `
+        <div class="btn-product ${p.stock <= 0 ? 'out-of-stock' : ''}" onclick="ajouterAuTicket('${p.id}')">
+          <span class="title">${p.nom}</span>
+          <span class="price">${p.prix.toFixed(2)} €</span>
+          <span class="stock">Stock: ${p.stock} ${p.stock === 0 ? '<span class="badge-warning">ÉPUISÉ</span>' : ''}</span>
+        </div>
+      `).join('');
+
+      // 2. Ticket de caisse en cours
+      const ticketList = document.getElementById('ticket-list');
+      ticketList.innerHTML = ticketCourant.map((item, index) => `
+        <li class="history-item">
+          <span>${item.nom} (${item.prix.toFixed(2)} €)</span>
+          <button onclick="AnnulerArticleTicket(${index})">X</button>
+        </li>
+      `).join('');
+
+      const total = ticketCourant.reduce((sum, item) => sum + item.prix, 0);
+      document.getElementById('ticket-total').innerText = total.toFixed(2) + ' €';
+
+      // 3. Table Produits
+      const tbody = document.querySelector('#table-produits tbody');
+      tbody.innerHTML = produits.map(p => `
+        <tr>
+          <td><strong>${p.nom}</strong></td>
+          <td>${p.prix.toFixed(2)} €</td>
+          <td>${p.stock}</td>
+          <td>
+            <button onclick="editerProduit('${p.id}')" style="border:none; background:none; cursor:pointer;">✏️</button>
+            <button onclick="supprimerProduit('${p.id}')" style="border:none; background:none; cursor:pointer;">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+
+      // 4. Bilan
+      const grandTotal = ventes.reduce((sum, v) => sum + v.total, 0);
+      const nbArticles = ventes.reduce((sum, v) => sum + v.articles.length, 0);
+      document.getElementById('bilan-total').innerText = grandTotal.toFixed(2) + ' €';
+      document.getElementById('bilan-articles').innerText = nbArticles;
+    }
+
+    // Enregistrement du Service Worker pour le mode Hors-Ligne (PWA)
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => e.waitUntil(caches.open('caisse-v1').then(c => c.addAll(['./']))));
+        self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
+    // Premier rendu
+    render();
+  </script>
+</body>
+</html>
