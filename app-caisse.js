@@ -1,4 +1,4 @@
-// Produits initialisés directement avec tes données exactes du fichier Excel
+// Produits initialisés avec tes données exactes
 const produitsInitiaux = [
   // Peluches
   { id: '1', nom: 'Dragon', categorie: 'Peluche', prix: 35, stock: 2 },
@@ -121,7 +121,6 @@ function supprimerProduit(id) {
   }
 }
 
-// Export en PDF du bilan
 function exporterPDF() {
   const element = document.getElementById('pdf-report');
   const opt = {
@@ -172,28 +171,48 @@ function reinitialiserTout() {
 
 function render() {
   // 1. Filtres par catégorie
-  const categories = ['Toutes', ...new Set(produits.map(p => p.categorie))];
+  const categoriesDisponibles = ['Toutes', ...new Set(produits.map(p => p.categorie))];
   const catFiltersContainer = document.getElementById('category-filters');
-  catFiltersContainer.innerHTML = categories.map(c => `
+  catFiltersContainer.innerHTML = categoriesDisponibles.map(c => `
     <button class="chip-filter ${categorieFiltre === c ? 'active' : ''}" onclick="filtrerCategorie('${c}')">${c}</button>
   `).join('');
 
-  // 2. Grille Caisse
-  const grid = document.getElementById('grid-produits');
-  const produitsFiltres = categorieFiltre === 'Toutes' ? produits : produits.filter(p => p.categorie === categorieFiltre);
+  // 2. Grille Caisse avec sections par catégorie
+  const container = document.getElementById('grid-produits');
+  
+  const ordreCategories = ['Peluche', 'Porte clé', 'Décoration', 'Vêtements'];
+  const categoriesAfficher = categorieFiltre === 'Toutes' ? ordreCategories : [categorieFiltre];
 
-  grid.innerHTML = produitsFiltres.map(p => {
-    const sansPrix = p.prix === null;
-    const epuise = p.stock <= 0;
-    return `
-      <div class="btn-product ${epuise ? 'out-of-stock' : ''} ${sansPrix ? 'no-price' : ''}" onclick="ajouterAuTicket('${p.id}')">
-        <span class="cat-tag">${p.categorie}</span>
-        <span class="title">${p.nom}</span>
-        <span class="price">${sansPrix ? 'Prix non défini' : p.prix.toFixed(2) + ' €'}</span>
-        <span class="stock">Stock: ${p.stock} ${epuise ? '<span class="badge-warning">ÉPUISÉ</span>' : ''}</span>
-      </div>
-    `;
-  }).join('');
+  let htmlContent = '';
+
+  categoriesAfficher.forEach(cat => {
+    const prodsCat = produits.filter(p => p.categorie === cat);
+    if (prodsCat.length === 0) return;
+
+    if (categorieFiltre === 'Toutes') {
+      const titreAffichage = cat === 'Porte clé' ? 'Porte-clés' : cat + 's';
+      htmlContent += `<div class="category-section"><div class="category-section-title">${titreAffichage}</div><div class="grid">`;
+    } else {
+      htmlContent += `<div class="grid">`;
+    }
+
+    htmlContent += prodsCat.map(p => {
+      const sansPrix = p.prix === null;
+      const epuise = p.stock <= 0;
+      return `
+        <div class="btn-product ${epuise ? 'out-of-stock' : ''} ${sansPrix ? 'no-price' : ''}" onclick="ajouterAuTicket('${p.id}')">
+          <span class="title">${p.nom}</span>
+          <span class="price">${sansPrix ? 'Prix à définir' : p.prix.toFixed(2) + ' €'}</span>
+          <span class="stock">Stock: ${p.stock} ${epuise ? '<span class="badge-warning">ÉPUISÉ</span>' : ''}</span>
+        </div>
+      `;
+    }).join('');
+
+    htmlContent += `</div></div>`;
+  });
+
+  container.innerHTML = htmlContent;
+  container.style.display = 'block';
 
   // 3. Ticket
   const ticketList = document.getElementById('ticket-list');
@@ -213,7 +232,7 @@ function render() {
     <tr>
       <td><strong>${p.nom}</strong></td>
       <td>${p.categorie}</td>
-      <td>${p.prix !== null ? p.prix.toFixed(2) + ' €' : '<em style="color:var(--mustard);">À définir</em>'}</td>
+      <td>${p.prix !== null ? p.prix.toFixed(2) + ' €' : '<em style="color:var(--berry);">À définir</em>'}</td>
       <td>${p.stock}</td>
       <td>
         <button onclick="editerProduit('${p.id}')" style="border:none; background:none; cursor:pointer;">✏️</button>
