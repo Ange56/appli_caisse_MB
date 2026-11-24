@@ -9,7 +9,7 @@ const produitsInitiaux = [
   { id: '6', nom: 'Totoro (grand)', categorie: 'Peluche', prix: 15, stock: 1 },
   { id: '7', nom: 'Totoro (petit)', categorie: 'Peluche', prix: 15, stock: 1 },
   { id: '8', nom: 'Souris', categorie: 'Peluche', prix: 10, stock: 1 },
-  { id: '9', nom: 'Abeille (peluche)', categorie: 'Peluche', prix: null, stock: 0 },
+  { id: '9', nom: 'Abeille', categorie: 'Peluche', prix: 15, stock: 1},
 
   // Porte clés
   { id: '10', nom: 'Grenouilles', categorie: 'Porte clé', prix: 8, stock: 6 },
@@ -18,7 +18,7 @@ const produitsInitiaux = [
   { id: '13', nom: 'Poule', categorie: 'Porte clé', prix: 5, stock: 5 },
   { id: '14', nom: 'Poulpe', categorie: 'Porte clé', prix: 6, stock: 2 },
   { id: '15', nom: 'Baleine', categorie: 'Porte clé', prix: 8, stock: 3 },
-  { id: '16', nom: 'Abeille (porte-clé)', categorie: 'Porte clé', prix: null, stock: 0 },
+  { id: '16', nom: 'Abeille', categorie: 'Porte clé', prix: 8, stock: 2 },
 
   // Décorations
   { id: '17', nom: 'Sucre d\'orge', categorie: 'Décoration', prix: 5, stock: 0 },
