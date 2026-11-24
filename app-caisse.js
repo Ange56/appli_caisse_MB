@@ -25,7 +25,7 @@ const produitsInitiaux = [
   { id: '18', nom: 'Petite guirlande', categorie: 'Décoration', prix: 3, stock: 0 },
   { id: '19', nom: 'Sapin', categorie: 'Décoration', prix: 8, stock: 0 },
   { id: '20', nom: 'Déco rétroviseur', categorie: 'Décoration', prix: 6, stock: 0 },
-  { id: '21', nom: 'Dessous de verre flocon', categorie: 'Décoration', prix: 3, stock: 0 },
+  { id: '21', nom: 'Dessous de verre flocon', categorie: 'Décoration', prix: 3, stock: 12 },
 
   // Vêtements
   { id: '22', nom: 'Mitaines', categorie: 'Vêtements', prix: 13, stock: 3 }
